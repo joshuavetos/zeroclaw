@@ -22,6 +22,13 @@ struct ReplayState {
     current: usize,
 }
 
+fn lock_recover<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
+
 /// Replays a trace's scripted steps in FIFO order, one queue per conversation turn.
 ///
 /// The provider is opaque to the runner (it is injected as a boxed `ModelProvider`
@@ -30,13 +37,6 @@ struct ReplayState {
 /// `ReplayHandle::finish_turn` after each `Agent::turn` completes to assert the
 /// turn's scripted steps were fully consumed and advance the cursor. Requesting
 /// more responses than a turn scripts is an error (per-turn exhaustion guard).
-
-fn lock_recover<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    match mutex.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    }
-}
 pub struct TraceLlmProvider {
     state: Arc<Mutex<ReplayState>>,
     trace_name: String,
