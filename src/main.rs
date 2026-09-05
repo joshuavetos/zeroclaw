@@ -4691,10 +4691,8 @@ async fn async_main(command: clap::Command) -> Result<()> {
 
     // All other commands need config loaded first
     let mut config = Box::pin(Config::load_or_init()).await?;
-    let running_executable = zeroclaw_runtime::restart::recorded_launch_executable()
-        .map(std::path::Path::to_path_buf)
-        .or_else(|| std::env::current_exe().ok())
-        .map(|path| path.display().to_string());
+    let running_executable =
+        running_executable_for_remediation().map(|path| path.display().to_string());
     for section in config
         .degraded_sections
         .iter()
@@ -9422,6 +9420,20 @@ fn warn_verifiable_intent_withheld(config: &Config) {
     );
 }
 
+fn running_executable_for_remediation() -> Option<std::path::PathBuf> {
+    #[cfg(feature = "agent-runtime")]
+    {
+        zeroclaw_runtime::restart::recorded_launch_executable()
+            .map(std::path::Path::to_path_buf)
+            .or_else(|| std::env::current_exe().ok())
+    }
+
+    #[cfg(not(feature = "agent-runtime"))]
+    {
+        std::env::current_exe().ok()
+    }
+}
+
 fn gate_security_posture(
     config: &zeroclaw::config::Config,
     allow_degraded: bool,
@@ -9431,9 +9443,7 @@ fn gate_security_posture(
     }
     let sections = config.degraded_security.join(", ");
     if !allow_degraded {
-        let remediation_executable = zeroclaw_runtime::restart::recorded_launch_executable()
-            .map(std::path::Path::to_path_buf)
-            .or_else(|| std::env::current_exe().ok());
+        let remediation_executable = running_executable_for_remediation();
         let remediation = remediation_executable.map_or_else(
             || {
                 "The running executable path could not be resolved; use a daemon-owned repair \
