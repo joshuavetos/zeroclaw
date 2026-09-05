@@ -4704,11 +4704,15 @@ async fn async_main(command: clap::Command) -> Result<()> {
         let warning = if let Some(executable) = running_executable.as_deref() {
             ta(
                 "cli-config-section-degraded",
-                &[("section", section), ("path", &path), ("executable", executable)],
+                &[
+                    ("section", section),
+                    ("path", &path),
+                    ("executable", executable),
+                ],
                 "warning: config section is malformed and was reset to defaults \
                  for this run. Values in that section are NOT in effect. Use the \
                  running executable with `config migrate` to see the parse error, \
-                 then repair the file."
+                 then repair the file.",
             )
         } else {
             format!(
