@@ -197,7 +197,10 @@ mod tests {
         let command = launch_command_from_resolved_exe(Some(path.clone()), Vec::new());
 
         assert_eq!(command.exe, path);
-        assert_eq!(remediation_executable(&command), Some(command.exe.as_path()));
+        assert_eq!(
+            remediation_executable(&command),
+            Some(command.exe.as_path())
+        );
     }
 
     #[test]
