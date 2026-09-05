@@ -4700,17 +4700,20 @@ async fn async_main(command: clap::Command) -> Result<()> {
     {
         let path = config.config_path.display().to_string();
         let warning = if let Some(executable) = running_executable.as_deref() {
+            let fallback = format!(
+                "warning: config section `{section}` in {path} is malformed and was reset to \
+                 defaults for this run. Values in that section are NOT in effect. Use the \
+                 running executable at `{executable}` with `config migrate` to see the parse \
+                 error, then repair the file."
+            );
             ta(
-                "cli-config-section-degraded",
+                "cli-config-section-degraded-executable",
                 &[
                     ("section", section),
                     ("path", &path),
                     ("executable", executable),
                 ],
-                "warning: config section is malformed and was reset to defaults \
-                 for this run. Values in that section are NOT in effect. Use the \
-                 running executable with `config migrate` to see the parse error, \
-                 then repair the file.",
+                &fallback,
             )
         } else {
             format!(
@@ -9423,9 +9426,13 @@ fn warn_verifiable_intent_withheld(config: &Config) {
 fn running_executable_for_remediation() -> Option<std::path::PathBuf> {
     #[cfg(feature = "agent-runtime")]
     {
-        zeroclaw_runtime::restart::recorded_launch_executable()
-            .map(std::path::Path::to_path_buf)
-            .or_else(|| std::env::current_exe().ok())
+        if let Some(executable) = zeroclaw_runtime::restart::recorded_launch_executable() {
+            return Some(executable.to_path_buf());
+        }
+        if zeroclaw_runtime::restart::launch_command_recorded() {
+            return None;
+        }
+        std::env::current_exe().ok()
     }
 
     #[cfg(not(feature = "agent-runtime"))]

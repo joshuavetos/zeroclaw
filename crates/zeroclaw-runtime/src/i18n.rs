@@ -400,6 +400,28 @@ mod tests {
     }
 
     #[test]
+    fn executable_degraded_guidance_falls_back_past_stale_translated_catalog() {
+        let stale_disk =
+            "cli-config-section-degraded = advertencia: Ejecuta `zeroclaw config migrate`.\n";
+        let executable = "/opt/zeroclaw/bin/zeroclaw";
+
+        let rendered = get_disk_override_cli_string_for_test(
+            "es",
+            stale_disk,
+            "cli-config-section-degraded-executable",
+            &[
+                ("section", "risk_profiles"),
+                ("path", "/tmp/config.toml"),
+                ("executable", executable),
+            ],
+        );
+
+        assert!(rendered.contains(executable));
+        assert!(rendered.contains("config migrate"));
+        assert!(!rendered.contains("`zeroclaw config migrate`"));
+    }
+
+    #[test]
     fn paircode_cli_strings_format_in_every_builtin_locale() {
         let endpoint = "gateway.example:49001";
         let cases = [

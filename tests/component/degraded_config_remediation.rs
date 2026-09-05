@@ -122,3 +122,40 @@ level = "autonomous"
         "daemon startup must not direct the operator through PATH: {stderr}"
     );
 }
+
+#[cfg(not(feature = "agent-runtime"))]
+#[test]
+fn degraded_config_guidance_keeps_executable_path_without_runtime_i18n() {
+    let config_dir = tempfile::tempdir().expect("temp config dir");
+    std::fs::write(
+        config_dir.path().join("config.toml"),
+        r#"schema_version = 3
+
+[risk_profiles.example]
+level = "autonomous"
+"#,
+    )
+    .expect("write degraded config");
+
+    let zeroclaw = Path::new(env!("CARGO_BIN_EXE_zeroclaw"));
+    let output = Command::new(zeroclaw)
+        .arg("--config-dir")
+        .arg(config_dir.path())
+        .arg("daemon")
+        .env("LC_ALL", "C")
+        .env("TERM", "dumb")
+        .output()
+        .expect("run no-runtime zeroclaw");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let executable = zeroclaw.display().to_string();
+
+    assert!(
+        stderr.contains(&executable) && stderr.contains("config migrate"),
+        "no-runtime fallback must retain the actual executable path {executable}: {stderr}"
+    );
+    assert!(
+        !stderr.contains("`zeroclaw config migrate`"),
+        "no-runtime fallback must not direct remediation through PATH: {stderr}"
+    );
+}
